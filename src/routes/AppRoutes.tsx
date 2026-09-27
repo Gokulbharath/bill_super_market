@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AppLayout } from '@/layouts/AppLayout';
 import { PageSkeleton } from '@/components/common/Skeletons';
 import { useAuthStore } from '@/stores/authStore';
@@ -27,8 +27,11 @@ function SuspenseWrapper({ children }: { children: React.ReactNode }) {
 }
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const { isAuthenticated, hasPermission, user } = useAuthStore();
+  const location = useLocation();
   if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (user?.role === 'CASHIER' && location.pathname === '/dashboard') return <Navigate to="/pos" replace />;
+  if (!hasPermission(location.pathname)) return <Navigate to="/403" replace />;
   return <>{children}</>;
 }
 
@@ -67,6 +70,7 @@ export function AppRoutes() {
           <Route path="/expenses" element={<SuspenseWrapper><ExpensesPage /></SuspenseWrapper>} />
           <Route path="/settings" element={<SuspenseWrapper><SettingsPage /></SuspenseWrapper>} />
           <Route path="/users" element={<SuspenseWrapper><UsersPage /></SuspenseWrapper>} />
+          <Route path="/profile" element={<SuspenseWrapper><SettingsPage /></SuspenseWrapper>} />
         </Route>
 
         <Route path="*" element={<Navigate to="/404" replace />} />

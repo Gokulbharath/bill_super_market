@@ -1,1 +1,32 @@
 /* App-specific styles */
+
+@media print {
+	body * { visibility: hidden !important; }
+	.print-label, .print-label * { visibility: visible !important; }
+	@page { size: 58mm auto; margin: 0; }
+	.print-label { position: absolute; left: 0; top: 0; width: 58mm !important; min-height: 45mm; padding: 4mm; color: #000; background: #fff; }
+}
+
+.thermal-label { box-sizing: border-box; margin: 0 auto; padding: 14px 12px; border: 1px solid hsl(var(--border)); border-radius: 6px; background: #fff; color: #111; text-align: center; font-family: Georgia, 'Noto Sans Tamil', serif; }
+.thermal-store { margin: 0 0 10px; font-family: Arial, sans-serif; font-size: 11px; font-weight: 800; letter-spacing: .12em; }
+.thermal-product { margin: 0; font-size: 21px; font-weight: 700; line-height: 1.15; }
+.thermal-tamil { margin: 4px 0 0; font-size: 16px; line-height: 1.2; }
+.thermal-price { margin: 12px 0 10px; font-family: Arial, sans-serif; font-size: 22px; font-weight: 800; }
+.thermal-barcode-wrap { display: flex; width: 100%; justify-content: center; align-items: center; overflow: hidden; }
+.thermal-barcode { display: block; max-width: 100%; height: auto; }
+.thermal-value { margin: 7px 0 0; font-family: 'Courier New', monospace; font-size: 14px; letter-spacing: .12em; }
+.barcode-copy { break-inside: avoid; page-break-inside: avoid; }
+
+@media print {
+	.thermal-label { border: 0; border-radius: 0; margin: 0; }
+	@page { size: 80mm auto; margin: 0; }
+	body * { visibility: hidden !important; }
+	.print-receipt, .print-receipt * { visibility: visible !important; }
+	.print-receipt { position: absolute; left: 0; top: 0; width: 80mm; padding: 4mm; color: #000; background: #fff; }
+	.receipt-preview { visibility: hidden !important; }
+	.receipt-print-copies, .receipt-print-copies * { visibility: visible !important; }
+	.receipt-print-copies { position: absolute; left: 0; top: 0; width: 80mm; padding: 4mm; color: #000; background: #fff; }
+	.receipt-print-copy { break-after: page; page-break-after: always; }
+}
+
+.receipt-print-copies { display: none; }

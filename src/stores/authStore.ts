@@ -1,45 +1,68 @@
 import { create } from 'zustand';
+import { authUsers } from '@/config/authUsers';
+import { hasPermission as canAccess } from '@/config/permissions';
 import type { User, UserRole } from '@/types';
+
+const SESSION_KEY = 'sree-super-market-session';
+
+function readStoredSession(): User | null {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY) || sessionStorage.getItem(SESSION_KEY);
+    if (!raw) return null;
+    const session = JSON.parse(raw) as User;
+    return session.id && session.email && session.role && session.loginTime ? session : null;
+  } catch {
+    return null;
+  }
+}
 
 interface AuthStoreState {
   user: User | null;
+  currentUser: User | null;
   isAuthenticated: boolean;
-  login: (user: User) => void;
+  login: (email: string, password: string, remember: boolean) => User | null;
   logout: () => void;
-  setRole: (role: UserRole) => void;
+  restoreSession: () => void;
+  hasRole: (role: UserRole | UserRole[]) => boolean;
+  hasPermission: (path: string) => boolean;
 }
 
-export const useAuthStore = create<AuthStoreState>((set) => ({
-  user: null,
-  isAuthenticated: false,
-  login: (user) => set({ user, isAuthenticated: true }),
-  logout: () => set({ user: null, isAuthenticated: false }),
-  setRole: (role) =>
-    set((state) => ({
-      user: state.user ? { ...state.user, role } : state.user,
-    })),
-}));
+const initialUser = readStoredSession();
 
-export const demoUsers: Record<UserRole, User> = {
-  OWNER: {
-    id: '1',
-    name: 'Store Owner',
-    email: 'owner@sreesupermarket.in',
-    username: 'owner',
-    role: 'OWNER',
+export const useAuthStore = create<AuthStoreState>((set, get) => ({
+  user: initialUser,
+  currentUser: initialUser,
+  isAuthenticated: Boolean(initialUser),
+  login: (email, password, remember) => {
+    const authUser = authUsers.find(
+      (candidate) => candidate.email.toLowerCase() === email.trim().toLowerCase() && candidate.password === password,
+    );
+    if (!authUser) return null;
+
+    const { password: _password, ...session } = authUser;
+    const user = { ...session, loginTime: new Date().toISOString() };
+    const storage = remember ? localStorage : sessionStorage;
+    localStorage.removeItem(SESSION_KEY);
+    sessionStorage.removeItem(SESSION_KEY);
+    storage.setItem(SESSION_KEY, JSON.stringify(user));
+    set({ user, currentUser: user, isAuthenticated: true });
+    return user;
   },
-  ADMIN: {
-    id: '2',
-    name: 'Store Admin',
-    email: 'admin@sreesupermarket.in',
-    username: 'admin',
-    role: 'ADMIN',
+  logout: () => {
+    localStorage.removeItem(SESSION_KEY);
+    sessionStorage.removeItem(SESSION_KEY);
+    set({ user: null, currentUser: null, isAuthenticated: false });
   },
-  CASHIER: {
-    id: '3',
-    name: 'Cashier One',
-    email: 'cashier@sreesupermarket.in',
-    username: 'cashier',
-    role: 'CASHIER',
+  restoreSession: () => {
+    const user = readStoredSession();
+    set({ user, currentUser: user, isAuthenticated: Boolean(user) });
   },
-};
+  hasRole: (role) => {
+    const user = get().user;
+    return Boolean(user && (Array.isArray(role) ? role.includes(user.role) : user.role === role));
+  },
+  hasPermission: (path) => {
+    const user = get().user;
+    return Boolean(user && canAccess(user.role, path));
+  },
+}));

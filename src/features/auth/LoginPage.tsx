@@ -6,14 +6,13 @@ import { z } from 'zod';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff, Lock, Mail, Store, MapPin, Phone, BadgeCheck } from 'lucide-react';
 import { storeConfig, fullStoreAddress } from '@/config/store';
-import { useAuthStore, demoUsers } from '@/stores/authStore';
+import { useAuthStore } from '@/stores/authStore';
 import { roleHomeRoutes } from '@/config/navigation';
 import { Logo } from '@/components/common/Logo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import type { UserRole } from '@/types';
 
 const loginSchema = z.object({
   email: z.string().min(1, 'Username or email is required'),
@@ -35,15 +34,14 @@ export function LoginPage() {
   });
 
   const onSubmit = (data: LoginForm) => {
-    const role: UserRole = data.email.toLowerCase().includes('cashier')
-      ? 'CASHIER'
-      : data.email.toLowerCase().includes('admin')
-        ? 'ADMIN'
-        : 'OWNER';
-    const user = demoUsers[role];
-    login(user);
+    const user = login(data.email, data.password, data.remember ?? false);
+    if (!user) {
+      toast({ title: 'Sign in failed', description: 'Invalid email or password.', variant: 'destructive' });
+      return;
+    }
+
     toast({ title: 'Login successful', description: `Welcome back, ${user.name}` });
-    navigate(roleHomeRoutes[role]);
+    navigate(roleHomeRoutes[user.role]);
   };
 
   return (
@@ -125,9 +123,6 @@ export function LoginPage() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <label htmlFor="password" className="text-sm font-medium">Password</label>
-                <button type="button" className="text-xs text-primary hover:underline" onClick={() => {}}>
-                  Forgot password?
-                </button>
               </div>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

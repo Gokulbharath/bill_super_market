@@ -1,14 +1,79 @@
-import { Warehouse } from 'lucide-react';
-import { PlaceholderPage } from '@/pages/PlaceholderPage';
+import { useEffect, useMemo, useState } from 'react';
+import { AlertTriangle, ArrowDownToLine, ArrowUpFromLine, ClipboardEdit, Loader2, Package, Search, Warehouse, X } from 'lucide-react';
+import { PageHeader } from '@/components/common/PageHeader';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/hooks/use-toast';
+import { productService, type InventoryMovement, type InventoryRow, type Product } from '@/services/productService';
+
+type Action = 'IN' | 'OUT' | 'ADJUST' | null;
+type FormState = { productId: string; quantity: string; batchNumber: string; manufacturingDate: string; expiryDate: string; physicalCount: string; reason: string; notes: string; movementType: string };
+const initialForm: FormState = { productId: '', quantity: '', batchNumber: '', manufacturingDate: '', expiryDate: '', physicalCount: '', reason: 'PHYSICAL_COUNT', notes: '', movementType: 'STOCK_IN' };
+
+function statusFor(row: InventoryRow) { return row.currentStock === 0 ? 'OUT OF STOCK' : row.currentStock <= row.minimumStock ? 'LOW STOCK' : 'IN STOCK'; }
 
 export function InventoryPage() {
-  return (
-    <PlaceholderPage
-      title="Inventory Management"
-      description="Track stock levels and manage inventory"
-      comingSoonDescription="The inventory management module will be implemented in Phase 5. You'll be able to track stock levels, manage stock adjustments, and monitor low-stock alerts."
-      icon={Warehouse}
-      breadcrumbs={[{ label: 'Inventory' }]}
-    />
-  );
+  const { toast } = useToast();
+  const [rows, setRows] = useState<InventoryRow[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [movements, setMovements] = useState<InventoryMovement[]>([]);
+  const [summary, setSummary] = useState({ totalProducts: 0, totalStockUnits: 0, totalStockValue: 0, lowStock: 0, outOfStock: 0, expiringSoon: 0, expired: 0, adjustmentsToday: 0 });
+  const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [action, setAction] = useState<Action>(null);
+  const [form, setForm] = useState<FormState>(initialForm);
+  const [saving, setSaving] = useState(false);
+  const [stockStatus, setStockStatus] = useState('ALL');
+  const [expiryStatus, setExpiryStatus] = useState('ALL');
+
+  const load = async (term = search) => {
+    setLoading(true);
+    try {
+      const queryParts = term ? [`search=${encodeURIComponent(term)}`] : [];
+      if (expiryStatus !== 'ALL') queryParts.push(`expiry=${expiryStatus}`);
+      const [inventory, overview, recent, catalog] = await Promise.all([productService.inventory(queryParts.join('&')), productService.inventorySummary(), productService.inventoryMovements(), productService.list()]);
+      setRows(stockStatus === 'IN_STOCK' ? inventory.filter((row) => row.currentStock > row.minimumStock) : stockStatus === 'LOW_STOCK' ? inventory.filter((row) => row.currentStock > 0 && row.currentStock <= row.minimumStock) : stockStatus === 'OUT_OF_STOCK' ? inventory.filter((row) => row.currentStock === 0) : inventory); setSummary(overview); setMovements(recent); setProducts(catalog);
+    } catch (error) { toast({ title: 'Unable to load inventory.', description: error instanceof Error ? error.message : 'Check the local POS server.', variant: 'destructive' }); }
+    finally { setLoading(false); }
+  };
+  useEffect(() => { void load(''); }, []);
+
+  const openAction = (next: Action) => { setForm(initialForm); setAction(next); };
+  const selectedProduct = products.find((product) => String(product.id) === form.productId);
+  const selectedInventory = rows.find((row) => String(row.id) === form.productId);
+  const updateForm = (key: keyof FormState, value: string) => setForm((current) => ({ ...current, [key]: value }));
+
+  const saveAction = async () => {
+    const productId = Number(form.productId);
+    if (!productId) { toast({ title: 'Select a product.', variant: 'destructive' }); return; }
+    setSaving(true);
+    try {
+      if (action === 'IN') await productService.stockIn({ productId, quantity: Number(form.quantity), batchNumber: form.batchNumber, manufacturingDate: form.manufacturingDate, expiryDate: form.expiryDate, notes: form.notes, movementType: form.movementType });
+      if (action === 'OUT') await productService.stockOut({ productId, quantity: Number(form.quantity), reason: form.reason, notes: form.notes });
+      if (action === 'ADJUST') await productService.adjustStock({ productId, physicalCount: Number(form.physicalCount), reason: form.reason, notes: form.notes });
+      setAction(null); toast({ title: 'Inventory updated successfully.' }); await load();
+    } catch (error) { toast({ title: error instanceof Error ? error.message : 'Unable to update inventory.', variant: 'destructive' }); }
+    finally { setSaving(false); }
+  };
+
+  const sections = useMemo(() => ({ low: rows.filter((row) => row.currentStock > 0 && row.currentStock <= row.minimumStock), out: rows.filter((row) => row.currentStock === 0), expiry: rows.filter((row) => row.nearestExpiry) }), [rows]);
+  const categoryValues = useMemo(() => Object.values(rows.reduce<Record<string, number>>((result, row) => { const key = row.categoryName || 'Uncategorized'; result[key] = (result[key] || 0) + row.stockValue; return result; }, {})), [rows]);
+  const cards = [['Total Products', summary.totalProducts], ['Total Stock Units', summary.totalStockUnits], ['Total Stock Value', `₹${summary.totalStockValue.toFixed(2)}`], ['Low Stock', summary.lowStock], ['Out of Stock', summary.outOfStock], ['Expiring Soon', summary.expiringSoon], ['Expired Products', summary.expired], ['Adjustments Today', summary.adjustmentsToday]];
+
+  return <div className="space-y-6">
+    <PageHeader title="Inventory Management" description="Track stock, value and movement across Sree Super Market." breadcrumbs={[{ label: 'Inventory' }]} actions={<div className="flex flex-wrap gap-2"><Button variant="outline" onClick={() => openAction('ADJUST')}><ClipboardEdit className="mr-2 h-4 w-4" /> Adjust Stock</Button><Button variant="outline" onClick={() => openAction('OUT')}><ArrowDownToLine className="mr-2 h-4 w-4" /> Stock Out</Button><Button onClick={() => openAction('IN')}><ArrowUpFromLine className="mr-2 h-4 w-4" /> Stock In</Button></div>} />
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{cards.map(([label, value]) => <div key={String(label)} className="rounded-lg border bg-card p-4"><p className="text-sm text-muted-foreground">{label}</p><p className="mt-2 text-2xl font-semibold">{value}</p></div>)}</div>
+    <div className="flex flex-col gap-3 lg:flex-row"><div className="relative max-w-lg flex-1"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input className="pl-9" placeholder="Search product, SKU, barcode, brand or category" value={search} onChange={(event) => setSearch(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') void load(); }} /></div><Select value={stockStatus} onValueChange={(value) => { setStockStatus(value); void load(); }}><SelectTrigger className="w-full lg:w-44"><SelectValue placeholder="Stock status" /></SelectTrigger><SelectContent><SelectItem value="ALL">All stock</SelectItem><SelectItem value="IN_STOCK">In stock</SelectItem><SelectItem value="LOW_STOCK">Low stock</SelectItem><SelectItem value="OUT_OF_STOCK">Out of stock</SelectItem></SelectContent></Select><Select value={expiryStatus} onValueChange={(value) => { setExpiryStatus(value); void load(); }}><SelectTrigger className="w-full lg:w-44"><SelectValue placeholder="Expiry status" /></SelectTrigger><SelectContent><SelectItem value="ALL">All expiry</SelectItem><SelectItem value="EXPIRING_SOON">Expiring soon</SelectItem><SelectItem value="EXPIRED">Expired</SelectItem></SelectContent></Select><Button variant="outline" onClick={() => void load()}>Search</Button></div>
+    <div className="grid gap-4 lg:grid-cols-4"><div className="rounded-lg border bg-card p-4"><h2 className="font-semibold">Low Stock Products</h2>{sections.low.length ? sections.low.map((row) => <div key={row.id} className="mt-3 flex justify-between text-sm"><span>{row.nameEnglish}</span><span>{row.currentStock} / {row.minimumStock} {row.unit}</span></div>) : <p className="mt-3 text-sm text-muted-foreground">No low stock products.</p>}</div><div className="rounded-lg border bg-card p-4"><h2 className="font-semibold">Out of Stock Products</h2>{sections.out.length ? sections.out.map((row) => <div key={row.id} className="mt-3 flex justify-between text-sm"><span>{row.nameEnglish}</span><span>0 {row.unit}</span></div>) : <p className="mt-3 text-sm text-muted-foreground">No out of stock products.</p>}</div><div className="rounded-lg border bg-card p-4"><h2 className="font-semibold">Expiring Products</h2>{sections.expiry.length ? sections.expiry.map((row) => <div key={row.id} className="mt-3 flex justify-between text-sm"><span>{row.nameEnglish}</span><span>{row.nearestExpiry}</span></div>) : <p className="mt-3 text-sm text-muted-foreground">No expiring products.</p>}</div><div className="rounded-lg border bg-card p-4"><h2 className="font-semibold">Stock Value by Category</h2>{categoryValues.length ? categoryValues.map((value, index) => <div key={index} className="mt-3 flex justify-between text-sm"><span>{Object.keys(rows.reduce<Record<string, number>>((result, row) => { const key = row.categoryName || 'Uncategorized'; result[key] = (result[key] || 0) + row.stockValue; return result; }, {}))[index]}</span><span>₹{value.toFixed(2)}</span></div>) : <p className="mt-3 text-sm text-muted-foreground">No inventory value available.</p>}</div></div>
+    <div className="grid gap-4 lg:grid-cols-2"><div className="rounded-lg border bg-card p-4"><h2 className="font-semibold">Fast Moving Products</h2><p className="mt-3 text-sm text-muted-foreground">No sales data available.</p></div><div className="rounded-lg border bg-card p-4"><h2 className="font-semibold">Slow Moving Products</h2><p className="mt-3 text-sm text-muted-foreground">No sales data available.</p></div></div>
+    <div className="overflow-x-auto rounded-lg border bg-card"><table className="w-full text-sm"><thead className="border-b bg-muted/50"><tr>{['Product', 'Tamil Name', 'Barcode', 'Category', 'Unit', 'Current Stock', 'Minimum', 'Purchase Price', 'Stock Value', 'Status'].map((heading) => <th key={heading} className="whitespace-nowrap px-4 py-3 text-left font-medium">{heading}</th>)}</tr></thead><tbody>{loading ? <tr><td colSpan={10} className="p-8 text-center"><Loader2 className="mx-auto h-5 w-5 animate-spin" /></td></tr> : rows.length === 0 ? <tr><td colSpan={10} className="p-8 text-center text-muted-foreground"><Package className="mx-auto mb-2 h-8 w-8" />No inventory data available.</td></tr> : rows.map((row) => <tr key={row.id} className="border-b last:border-0"><td className="px-4 py-3 font-medium">{row.nameEnglish}</td><td className="px-4 py-3">{row.nameTamil || '—'}</td><td className="px-4 py-3 font-mono">{row.identifierValue || '—'}</td><td className="px-4 py-3">{row.categoryName || '—'}</td><td className="px-4 py-3">{row.unit || row.unitName}</td><td className="px-4 py-3">{row.currentStock}</td><td className="px-4 py-3">{row.minimumStock}</td><td className="px-4 py-3">₹{row.purchasePrice.toFixed(2)}</td><td className="px-4 py-3">₹{row.stockValue.toFixed(2)}</td><td className="px-4 py-3"><Badge variant={statusFor(row) === 'IN STOCK' ? 'default' : statusFor(row) === 'LOW STOCK' ? 'outline' : 'destructive'}>{statusFor(row)}</Badge></td></tr>)}</tbody></table></div>
+    <div className="rounded-lg border bg-card p-4"><h2 className="font-semibold">Recent Stock Movements</h2>{movements.length ? <div className="mt-3 divide-y">{movements.map((movement) => <div key={movement.id} className="flex items-center justify-between py-3 text-sm"><span>{movement.movement_type.replace('_', ' ')} · {movement.productName}</span><span className={movement.quantity >= 0 ? 'text-emerald-600' : 'text-destructive'}>{movement.quantity > 0 ? '+' : ''}{movement.quantity} {movement.unit}</span><span className="text-muted-foreground">{movement.created_by}</span></div>)}</div> : <p className="mt-3 text-sm text-muted-foreground">No stock movements yet.</p>}</div>
+
+    <Dialog open={Boolean(action)} onOpenChange={(open) => !open && setAction(null)}><DialogContent><DialogHeader><DialogTitle>{action === 'IN' ? 'Stock In' : action === 'OUT' ? 'Stock Out' : 'Adjust Stock'}</DialogTitle><DialogDescription>{action === 'IN' ? 'Add stock to the selected product. Pricing is managed in Product Master.' : 'All changes are recorded in the SQLite stock movement ledger.'}</DialogDescription></DialogHeader><div className="space-y-4"><div><Label>Product</Label><Select value={form.productId} onValueChange={(value) => updateForm('productId', value)}><SelectTrigger><SelectValue placeholder="Search or select product" /></SelectTrigger><SelectContent>{products.map((product) => <SelectItem key={product.id} value={String(product.id)}>{product.nameEnglish} · {product.sku}</SelectItem>)}</SelectContent></Select></div>{selectedProduct && action === 'IN' && <div className="grid gap-2 rounded-md bg-muted p-3 text-sm sm:grid-cols-2"><div className="sm:col-span-2 font-medium">{selectedProduct.nameEnglish}</div>{selectedProduct.nameTamil && <div className="sm:col-span-2">{selectedProduct.nameTamil}</div>}<div>Barcode: {selectedProduct.identifierValue || '—'}</div><div>Unit: {selectedProduct.unitSymbol || selectedProduct.unitName || 'UNIT'}</div><div>Current Stock: {selectedInventory?.currentStock ?? 0} {selectedInventory?.unit || selectedProduct.unitSymbol || selectedProduct.unitName || ''}</div><div>Minimum Stock: {selectedInventory?.minimumStock ?? selectedProduct.minimumStock ?? 0} {selectedInventory?.unit || selectedProduct.unitSymbol || selectedProduct.unitName || ''}</div><div>Purchase Price: ₹{selectedProduct.purchasePrice.toFixed(2)}</div><div>MRP: ₹{selectedProduct.mrp.toFixed(2)}</div><div>Selling Price: ₹{selectedProduct.sellingPrice.toFixed(2)}</div></div>}{selectedProduct && action !== 'IN' && <p className="rounded-md bg-muted p-3 text-sm">{selectedProduct.nameEnglish} · {selectedProduct.nameTamil || 'No Tamil name'} · {selectedProduct.identifierValue || 'No barcode'}</p>}{action === 'ADJUST' ? <div><Label>Physical Count</Label><Input type="number" min="0" step="0.01" value={form.physicalCount} onChange={(event) => updateForm('physicalCount', event.target.value)} /></div> : <div><Label>Quantity</Label><Input type="number" min="0.01" step="0.01" value={form.quantity} onChange={(event) => updateForm('quantity', event.target.value)} /></div>}{action === 'IN' && <><div><Label>Movement</Label><Select value={form.movementType} onValueChange={(value) => updateForm('movementType', value)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="STOCK_IN">Stock In</SelectItem><SelectItem value="OPENING_STOCK">Opening Stock</SelectItem></SelectContent></Select></div><div><Label>Batch Number</Label><Input value={form.batchNumber} onChange={(event) => updateForm('batchNumber', event.target.value)} /></div><div className="grid gap-3 sm:grid-cols-2"><div><Label>Manufacturing Date</Label><Input type="date" value={form.manufacturingDate} onChange={(event) => updateForm('manufacturingDate', event.target.value)} /></div><div><Label>Expiry Date</Label><Input type="date" value={form.expiryDate} onChange={(event) => updateForm('expiryDate', event.target.value)} /></div></div></>}{(action === 'OUT' || action === 'ADJUST') && <div><Label>Reason</Label><Select value={form.reason} onValueChange={(value) => updateForm('reason', value)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{(action === 'OUT' ? ['DAMAGED', 'EXPIRED', 'INTERNAL_USE', 'SUPPLIER_RETURN', 'LOSS', 'OTHER'] : ['PHYSICAL_COUNT', 'DAMAGED', 'MISSING', 'FOUND', 'CORRECTION', 'OTHER']).map((reason) => <SelectItem key={reason} value={reason}>{reason}</SelectItem>)}</SelectContent></Select></div>}<div><Label>Notes</Label><Textarea value={form.notes} onChange={(event) => updateForm('notes', event.target.value)} /></div></div><DialogFooter><Button variant="outline" onClick={() => setAction(null)}>Cancel</Button><Button onClick={() => void saveAction()} disabled={saving}>{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Confirm {action === 'IN' ? 'Stock In' : ''}</Button></DialogFooter></DialogContent></Dialog>
+  </div>;
 }
