@@ -14,7 +14,6 @@ export const navItems: NavItem[] = [
   { label: 'Held Bills', path: '/pos/held', icon: 'Receipt', roles: ['OWNER', 'ADMIN', 'CASHIER'] },
   { label: 'Recent Bills', path: '/pos/recent', icon: 'Receipt', roles: ['OWNER', 'ADMIN', 'CASHIER'] },
   { label: 'Settings', path: '/settings', icon: 'Settings', roles: ['OWNER'] },
-  { label: 'User Management', path: '/users', icon: 'UserCog', roles: ['OWNER'] },
   { label: 'Profile', path: '/profile', icon: 'User', roles: ['OWNER', 'ADMIN', 'CASHIER'] },
 ];
 

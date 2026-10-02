@@ -22,6 +22,7 @@ interface AuthStoreState {
   isAuthenticated: boolean;
   login: (email: string, password: string, remember: boolean) => User | null;
   logout: () => void;
+  updateUser: (changes: Partial<Pick<User, 'name' | 'email' | 'avatar'>>) => void;
   restoreSession: () => void;
   hasRole: (role: UserRole | UserRole[]) => boolean;
   hasPermission: (path: string) => boolean;
@@ -52,6 +53,14 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
     localStorage.removeItem(SESSION_KEY);
     sessionStorage.removeItem(SESSION_KEY);
     set({ user: null, currentUser: null, isAuthenticated: false });
+  },
+  updateUser: (changes) => {
+    const current = get().user;
+    if (!current) return;
+    const user = { ...current, ...changes };
+    const storage = localStorage.getItem(SESSION_KEY) ? localStorage : sessionStorage;
+    storage.setItem(SESSION_KEY, JSON.stringify(user));
+    set({ user, currentUser: user });
   },
   restoreSession: () => {
     const user = readStoredSession();

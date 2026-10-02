@@ -106,7 +106,7 @@ export function Header() {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <Link to="/settings" className="cursor-pointer">
+              <Link to="/profile" className="cursor-pointer">
                 <User className="mr-2 h-4 w-4" />
                 Profile
               </Link>

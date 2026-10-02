@@ -3,7 +3,7 @@ import type { UserRole } from '@/types';
 export const rolePermissions: Record<UserRole, string[]> = {
   OWNER: [
     '/dashboard', '/products', '/barcode', '/inventory', '/pos', '/pos/held', '/pos/recent',
-    '/customers', '/purchases', '/suppliers', '/reports', '/expenses', '/settings', '/users', '/profile',
+    '/customers', '/purchases', '/suppliers', '/reports', '/expenses', '/settings', '/profile',
   ],
   ADMIN: [
     '/dashboard', '/products', '/barcode', '/inventory', '/pos', '/pos/held', '/pos/recent',

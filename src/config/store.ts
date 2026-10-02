@@ -9,8 +9,8 @@ export const storeConfig = {
     state: 'Tamil Nadu',
     country: 'India',
   },
-  phone: '+91 90000 12345',
-  gstin: '33ABCDE1234F1Z5',
+  phone: '',
+  gstin: '',
   currency: {
     symbol: '₹',
     code: 'INR',
@@ -24,8 +24,8 @@ export const storeConfig = {
   receipt: {
     copies: 2,
     copy1Label: 'CASHIER COPY',
-    copy2Label: 'PACKING COPY',
-    counter: 'Counter 1',
+    copy2Label: 'DELIVERY COPY',
+    counter: 'Counter 01',
     footerNote: 'Thank you for shopping with us!',
   },
 } as const;

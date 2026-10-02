@@ -11,13 +11,15 @@ const ProductsPage = lazy(() => import('@/features/products/ProductsPage').then(
 const BarcodePage = lazy(() => import('@/features/barcode/BarcodePage').then((m) => ({ default: m.BarcodePage })));
 const InventoryPage = lazy(() => import('@/features/inventory/InventoryPage').then((m) => ({ default: m.InventoryPage })));
 const PosPage = lazy(() => import('@/features/pos/PosPage').then((m) => ({ default: m.PosPage })));
+const RecentBillsPage = lazy(() => import('@/features/pos/RecentBillsPage').then((m) => ({ default: m.RecentBillsPage })));
 const CustomersPage = lazy(() => import('@/features/customers/CustomersPage').then((m) => ({ default: m.CustomersPage })));
 const PurchasesPage = lazy(() => import('@/features/purchases/PurchasesPage').then((m) => ({ default: m.PurchasesPage })));
 const SuppliersPage = lazy(() => import('@/features/suppliers/SuppliersPage').then((m) => ({ default: m.SuppliersPage })));
 const ReportsPage = lazy(() => import('@/features/reports/ReportsPage').then((m) => ({ default: m.ReportsPage })));
 const ExpensesPage = lazy(() => import('@/features/expenses/ExpensesPage').then((m) => ({ default: m.ExpensesPage })));
 const SettingsPage = lazy(() => import('@/features/settings/SettingsPage').then((m) => ({ default: m.SettingsPage })));
-const UsersPage = lazy(() => import('@/features/users/UsersPage').then((m) => ({ default: m.UsersPage })));
+const HeldBillsPage = lazy(() => import('@/features/pos/HeldBillsPage').then((m) => ({ default: m.HeldBillsPage })));
+const ProfilePage = lazy(() => import('@/features/profile/ProfilePage').then((m) => ({ default: m.ProfilePage })));
 const ForbiddenPage = lazy(() => import('@/pages/ForbiddenPage').then((m) => ({ default: m.ForbiddenPage })));
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })));
 const GenericErrorPage = lazy(() => import('@/pages/GenericErrorPage').then((m) => ({ default: m.GenericErrorPage })));
@@ -63,14 +65,15 @@ export function AppRoutes() {
           <Route path="/barcode" element={<SuspenseWrapper><BarcodePage /></SuspenseWrapper>} />
           <Route path="/inventory" element={<SuspenseWrapper><InventoryPage /></SuspenseWrapper>} />
           <Route path="/pos" element={<SuspenseWrapper><PosPage /></SuspenseWrapper>} />
+          <Route path="/pos/held" element={<SuspenseWrapper><HeldBillsPage /></SuspenseWrapper>} />
+          <Route path="/pos/recent" element={<SuspenseWrapper><RecentBillsPage /></SuspenseWrapper>} />
           <Route path="/customers" element={<SuspenseWrapper><CustomersPage /></SuspenseWrapper>} />
           <Route path="/purchases" element={<SuspenseWrapper><PurchasesPage /></SuspenseWrapper>} />
           <Route path="/suppliers" element={<SuspenseWrapper><SuppliersPage /></SuspenseWrapper>} />
           <Route path="/reports" element={<SuspenseWrapper><ReportsPage /></SuspenseWrapper>} />
           <Route path="/expenses" element={<SuspenseWrapper><ExpensesPage /></SuspenseWrapper>} />
           <Route path="/settings" element={<SuspenseWrapper><SettingsPage /></SuspenseWrapper>} />
-          <Route path="/users" element={<SuspenseWrapper><UsersPage /></SuspenseWrapper>} />
-          <Route path="/profile" element={<SuspenseWrapper><SettingsPage /></SuspenseWrapper>} />
+          <Route path="/profile" element={<SuspenseWrapper><ProfilePage /></SuspenseWrapper>} />
         </Route>
 
         <Route path="*" element={<Navigate to="/404" replace />} />

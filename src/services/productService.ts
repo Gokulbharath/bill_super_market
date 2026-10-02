@@ -1,3 +1,5 @@
+import { request } from './apiClient';
+
 export interface Product {
   id: number;
   productCode: string;
@@ -119,35 +121,53 @@ export interface PosProduct {
   identifierValue?: string;
 }
 
+export interface CustomerRecord {
+  id: number;
+  customer_code: string;
+  name: string;
+  phone: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface BillRecord {
   id: number;
   bill_number: string;
   cashier_id: string;
+  cashier_name_snapshot?: string;
+  counter_snapshot?: string;
+  bill_date: string;
+  created_at: string;
+  customer_id?: number | null;
+  customer_name_snapshot?: string;
+  customer_phone_snapshot?: string;
+  customer_name?: string;
+  customer_phone?: string;
   subtotal: number;
   discount: number;
   taxable_amount: number;
   cgst: number;
   sgst: number;
+  round_off?: number;
   grand_total: number;
   payment_method: string;
+  cash_received?: number;
+  change_amount?: number;
   status: string;
-  items: Array<Record<string, unknown>>;
-}
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
-
-function currentRole() {
-  try {
-    const raw = localStorage.getItem('sree-super-market-session') || sessionStorage.getItem('sree-super-market-session');
-    return raw ? (JSON.parse(raw) as { role?: string }).role || '' : '';
-  } catch { return ''; }
-}
-
-async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, { headers: { 'Content-Type': 'application/json', 'X-User-Role': currentRole(), ...(options?.headers || {}) }, ...options });
-  const body = await response.json() as { success: boolean; data?: T; message?: string };
-  if (!response.ok || !body.success) throw new Error(body.message || 'Unable to reach the product service.');
-  return body.data as T;
+  items: Array<{
+    id: number;
+    product_name_snapshot: string;
+    product_tamil_name_snapshot?: string;
+    quantity: number;
+    unit: string;
+    selling_price: number;
+    gst_percent: number;
+    tax_amount: number;
+    line_total: number;
+    discount_amount?: number;
+    barcode_snapshot?: string;
+  }>;
 }
 
 export const productService = {
@@ -173,7 +193,13 @@ export const productService = {
   updateMinimum: (id: number, minimumQuantity: number) => request<InventoryRow>(`/inventory/products/${id}/minimum`, { method: 'PATCH', body: JSON.stringify({ minimumQuantity }) }),
   posLookup: (value: string) => request<PosProduct>(`/pos/products/lookup/${encodeURIComponent(value)}`),
   posSearch: (query: string) => request<PosProduct[]>(`/pos/products/search?q=${encodeURIComponent(query)}`),
-  finalizeBill: (payload: { items: Array<{ productId: number; quantity: number }>; discount: number }) => request<BillRecord>('/bills', { method: 'POST', body: JSON.stringify(payload) }),
+  customers: (search = '') => request<CustomerRecord[]>(`/customers${search ? `?search=${encodeURIComponent(search)}` : ''}`),
+  customer: (id: number) => request<CustomerRecord>(`/customers/${id}`),
+  searchCustomer: (phone: string) => request<CustomerRecord>(`/customers/search?phone=${encodeURIComponent(phone)}`),
+  createCustomer: (payload: { name: string; phone: string; status?: string }) => request<CustomerRecord>('/customers', { method: 'POST', body: JSON.stringify(payload) }),
+  updateCustomer: (id: number, payload: { name?: string; phone?: string; status?: string }) => request<CustomerRecord>(`/customers/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  customerBills: (id: number) => request<Array<Record<string, unknown>>>(`/customers/${id}/bills`),
+  finalizeBill: (payload: { items: Array<{ productId: number; quantity: number }>; discount: number; cashReceived?: number; cashierName?: string; counter?: string; customerId?: number | null; customerName?: string; customerPhone?: string }) => request<BillRecord>('/bills', { method: 'POST', body: JSON.stringify(payload) }),
   bills: (search = '') => request<BillRecord[]>(`/bills${search ? `?search=${encodeURIComponent(search)}` : ''}`),
   bill: (id: number) => request<BillRecord>(`/bills/${id}`),
 };

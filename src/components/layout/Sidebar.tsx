@@ -2,7 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Package, ScanBarcode, Warehouse, ShoppingCart,
-  Users, Truck, Building2, BarChart3, Receipt, Settings, UserCog,
+  Users, Truck, Building2, BarChart3, Receipt, Settings,
   LogOut, ChevronLeft, ShoppingBag,
 } from 'lucide-react';
 import { navItems } from '@/config/navigation';
@@ -17,7 +17,7 @@ import type { UserRole } from '@/types';
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   LayoutDashboard, Package, ScanBarcode, Warehouse, ShoppingCart,
-  Users, Truck, Building2, BarChart3, Receipt, Settings, UserCog,
+  Users, Truck, Building2, BarChart3, Receipt, Settings,
 };
 
 export function Sidebar() {

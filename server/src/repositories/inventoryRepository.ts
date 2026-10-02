@@ -55,19 +55,20 @@ export function movements(limit = 50) {
   return db.prepare(`SELECT m.*, p.name_english AS productName, pi.identifier_value AS identifierValue FROM inventory_movements m JOIN products p ON p.id = m.product_id LEFT JOIN product_identifiers pi ON pi.product_id = p.id AND pi.is_primary = 1 ORDER BY m.created_at DESC LIMIT ?`).all(limit);
 }
 
-function writeMovement(product: ProductRow, stock: { current_quantity: number; unit: string }, quantity: number, movementType: string, batchId: number | null, reason: string, notes: string, createdBy: string) {
+function writeMovement(product: ProductRow, stock: { current_quantity: number; unit: string }, quantity: number, movementType: string, batchId: number | null, reason: string, notes: string, createdBy: string, referenceId: string | null = null) {
   const after = stock.current_quantity + quantity;
   if (after < 0) throw new Error('INSUFFICIENT_STOCK');
   const timestamp = now();
   db.prepare('UPDATE inventory_stock SET current_quantity = ?, updated_at = ? WHERE product_id = ?').run(after, timestamp, product.id);
-  db.prepare('INSERT INTO inventory_movements (product_id, batch_id, movement_type, quantity, before_quantity, after_quantity, unit, reason, notes, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').run(product.id, batchId, movementType, quantity, stock.current_quantity, after, stock.unit, reason || '', notes || '', createdBy || 'SYSTEM', timestamp);
+  db.prepare('INSERT INTO inventory_movements (product_id, batch_id, movement_type, quantity, before_quantity, after_quantity, unit, reference_id, reason, notes, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').run(product.id, batchId, movementType, quantity, stock.current_quantity, after, stock.unit, referenceId, reason || '', notes || '', createdBy || 'SYSTEM', timestamp);
   return after;
 }
 
-export function stockIn(input: { productId: number; quantity: number; batchNumber?: string; manufacturingDate?: string; expiryDate?: string; notes?: string; movementType?: string; createdBy?: string }) {
+export function stockIn(input: { productId: number; quantity: number; batchNumber?: string; manufacturingDate?: string; expiryDate?: string; notes?: string; movementType?: string; purchasePrice?: number; reason?: string; referenceId?: string; createdBy?: string }) {
   const product = validateProduct(input.productId); validateQuantity(input.quantity); validateDate(input.manufacturingDate); validateDate(input.expiryDate);
   if (input.expiryDate && input.manufacturingDate && input.expiryDate < input.manufacturingDate) throw new Error('INVALID_DATE');
-  return db.transaction(() => { const stock = ensureStock(product); const timestamp = now(); const batch = db.prepare('INSERT INTO inventory_batches (product_id, batch_number, quantity, purchase_price, manufacturing_date, expiry_date, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)').run(product.id, input.batchNumber?.trim() || `OPEN-${timestamp.slice(0, 10)}`, input.quantity, product.purchasePrice, input.manufacturingDate || null, input.expiryDate || null, timestamp, timestamp); const after = writeMovement(product, stock, input.quantity, input.movementType || 'STOCK_IN', Number(batch.lastInsertRowid), '', input.notes || '', input.createdBy || 'SYSTEM'); return { product: product.nameEnglish, productId: product.id, currentStock: after, batchId: Number(batch.lastInsertRowid) }; })();
+  if (input.purchasePrice !== undefined && (!Number.isFinite(input.purchasePrice) || input.purchasePrice < 0)) throw new Error('INVALID_PRICE');
+  return db.transaction(() => { const stock = ensureStock(product); const timestamp = now(); const batch = db.prepare('INSERT INTO inventory_batches (product_id, batch_number, quantity, purchase_price, manufacturing_date, expiry_date, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)').run(product.id, input.batchNumber?.trim() || `OPEN-${timestamp.slice(0, 10)}`, input.quantity, input.purchasePrice ?? product.purchasePrice, input.manufacturingDate || null, input.expiryDate || null, timestamp, timestamp); const after = writeMovement(product, stock, input.quantity, input.movementType || 'STOCK_IN', Number(batch.lastInsertRowid), input.reason || '', input.notes || '', input.createdBy || 'SYSTEM', input.referenceId || null); return { product: product.nameEnglish, productId: product.id, currentStock: after, batchId: Number(batch.lastInsertRowid) }; })();
 }
 
 export function stockOut(input: { productId: number; quantity: number; reason: string; notes?: string; createdBy?: string }) {

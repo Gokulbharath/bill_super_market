@@ -13,6 +13,20 @@ function hasLegacySchema() {
   return !columns.some((column) => column.name === 'name_english');
 }
 
+function ensureCustomerColumns() {
+  const billColumns = db.prepare('PRAGMA table_info(bills)').all() as Array<{ name: string }>;
+  const requiredColumns = [
+    { name: 'customer_id', sql: 'ALTER TABLE bills ADD COLUMN customer_id INTEGER' },
+    { name: 'customer_name_snapshot', sql: "ALTER TABLE bills ADD COLUMN customer_name_snapshot TEXT DEFAULT 'Walk-in Customer'" },
+    { name: 'customer_phone_snapshot', sql: "ALTER TABLE bills ADD COLUMN customer_phone_snapshot TEXT DEFAULT ''" },
+  ];
+
+  for (const column of requiredColumns) {
+    if (billColumns.some((entry) => entry.name === column.name)) continue;
+    db.exec(column.sql);
+  }
+}
+
 export function runMigrations() {
   if (!fs.existsSync(migrationDir)) {
     fs.mkdirSync(migrationDir, { recursive: true });
@@ -39,4 +53,6 @@ export function runMigrations() {
     db.exec(sql);
     db.prepare('INSERT INTO schema_migrations (name, applied_at) VALUES (?, ?)').run(migrationName, new Date().toISOString());
   }
+
+  ensureCustomerColumns();
 }

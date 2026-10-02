@@ -1,12 +1,5 @@
 /* App-specific styles */
 
-@media print {
-	body * { visibility: hidden !important; }
-	.print-label, .print-label * { visibility: visible !important; }
-	@page { size: 58mm auto; margin: 0; }
-	.print-label { position: absolute; left: 0; top: 0; width: 58mm !important; min-height: 45mm; padding: 4mm; color: #000; background: #fff; }
-}
-
 .thermal-label { box-sizing: border-box; margin: 0 auto; padding: 14px 12px; border: 1px solid hsl(var(--border)); border-radius: 6px; background: #fff; color: #111; text-align: center; font-family: Georgia, 'Noto Sans Tamil', serif; }
 .thermal-store { margin: 0 0 10px; font-family: Arial, sans-serif; font-size: 11px; font-weight: 800; letter-spacing: .12em; }
 .thermal-product { margin: 0; font-size: 21px; font-weight: 700; line-height: 1.15; }
@@ -17,16 +10,74 @@
 .thermal-value { margin: 7px 0 0; font-family: 'Courier New', monospace; font-size: 14px; letter-spacing: .12em; }
 .barcode-copy { break-inside: avoid; page-break-inside: avoid; }
 
-@media print {
-	.thermal-label { border: 0; border-radius: 0; margin: 0; }
-	@page { size: 80mm auto; margin: 0; }
-	body * { visibility: hidden !important; }
-	.print-receipt, .print-receipt * { visibility: visible !important; }
-	.print-receipt { position: absolute; left: 0; top: 0; width: 80mm; padding: 4mm; color: #000; background: #fff; }
-	.receipt-preview { visibility: hidden !important; }
-	.receipt-print-copies, .receipt-print-copies * { visibility: visible !important; }
-	.receipt-print-copies { position: absolute; left: 0; top: 0; width: 80mm; padding: 4mm; color: #000; background: #fff; }
-	.receipt-print-copy { break-after: page; page-break-after: always; }
-}
+.invoice-preview-scroll { max-height: min(65vh, 760px); overflow: auto; padding: 16px; background: hsl(var(--muted)); }
+.invoice-preview-paper { width: 80mm; max-width: 100%; margin: 0 auto; padding: 2mm; background: #fff; color: #000; box-shadow: 0 1px 5px #0002; }
+.invoice-preview-58 { width: 58mm; }
+.invoice-preview-A4 { width: min(210mm, 100%); min-height: 297mm; display: flex; justify-content: center; align-items: flex-start; padding: 12mm; }
+.invoice-receipt { box-sizing: border-box; width: 100%; margin: 0 auto; color: #000; background: #fff; font-family: 'Courier New', 'Nirmala UI', 'Noto Sans Tamil', monospace; font-size: 10px; line-height: 1.3; overflow-wrap: anywhere; }
+.invoice-preview-A4 .invoice-receipt { width: 76mm; }
+.purchase-print-root { display: none; }
+.invoice-receipt p, .invoice-receipt h1 { margin: 0; }
+.invoice-copy-label { margin-bottom: 5px !important; text-align: center; font-size: 9px; font-weight: 700; }
+.invoice-header { text-align: center; }
+.invoice-header h1 { margin-bottom: 2px; font-size: 15px; line-height: 1.2; font-weight: 800; }
+.invoice-header p { line-height: 1.3; }
+.invoice-divider { margin: 6px 0; border-top: 1px dashed #222; }
+.invoice-details > div { display: grid; grid-template-columns: 22mm minmax(0, 1fr); align-items: start; gap: 3px; }
+.invoice-details strong { min-width: 0; text-align: right; font-weight: 600; overflow-wrap: anywhere; }
+.invoice-totals > div, .invoice-payment > div { display: flex; justify-content: space-between; gap: 5px; }
+.invoice-items-heading, .invoice-item { display: grid; grid-template-columns: minmax(0, 1fr) 8mm 13mm 16mm; gap: 2px; }
+.invoice-items-heading { margin-bottom: 4px; font-weight: 700; }
+.invoice-items-heading span:not(:first-child), .invoice-number { text-align: right; font-variant-numeric: tabular-nums; }
+.invoice-item { margin: 4px 0; align-items: start; break-inside: avoid; page-break-inside: avoid; }
+.invoice-item-name { min-width: 0; display: flex; flex-direction: column; overflow-wrap: anywhere; }
+.invoice-item-name strong { font-weight: 700; }
+.invoice-item-name span, .invoice-item-name small { font-size: 9px; }
+.invoice-item-name small { color: #333; }
+.invoice-preview-58 .invoice-items-heading, .invoice-preview-58 .invoice-item,
+body[data-invoice-paper='58mm'] .invoice-items-heading, body[data-invoice-paper='58mm'] .invoice-item { grid-template-columns: minmax(0, 1fr) 6mm 10mm 12mm; gap: 1px; }
+.invoice-preview-58 .invoice-details > div, body[data-invoice-paper='58mm'] .invoice-details > div { grid-template-columns: 15mm minmax(0, 1fr); }
+.invoice-grand-total { margin-top: 4px; padding-top: 5px; border-top: 1px solid #111; font-size: 12px; font-weight: 800; }
+.invoice-footer { display: flex; flex-direction: column; align-items: center; gap: 2px; margin-top: 9px; text-align: center; }
+.invoice-footer strong { font-size: 12px; }
+.invoice-qr-code { display: block; width: 24mm; height: 24mm; object-fit: contain; margin: 3mm auto; image-rendering: pixelated; }
+.invoice-print-root { display: none; }
 
-.receipt-print-copies { display: none; }
+@page invoice80 { size: 80mm auto; margin: 0; }
+@page invoice58 { size: 58mm auto; margin: 0; }
+@page invoiceA4 { size: A4; margin: 0; }
+
+@media print {
+	@page { margin: 0; }
+	body { margin: 0 !important; background: #fff !important; }
+	body * { visibility: hidden !important; }
+	.print-label, .print-label * { visibility: visible !important; }
+	.print-label { position: fixed; inset: 0 auto auto 0; width: 58mm !important; min-height: 45mm; padding: 4mm; color: #000; background: #fff; }
+	.thermal-label { border: 0; border-radius: 0; margin: 0; }
+	.invoice-print-root, .invoice-print-root * { visibility: visible !important; }
+	.invoice-print-root { display: block !important; position: fixed; inset: 0 auto auto 2mm; box-sizing: border-box; width: 76mm; padding: 0; color: #000; background: #fff; }
+	body[data-invoice-paper='58mm'] .invoice-print-root { width: 54mm; }
+	body[data-invoice-paper='A4'] .invoice-print-root { inset-inline: 0; width: 210mm; }
+	body[data-invoice-paper='80mm'] .invoice-print-copy { page: invoice80; }
+	body[data-invoice-paper='58mm'] .invoice-print-copy { page: invoice58; }
+	body[data-invoice-paper='A4'] .invoice-print-copy { page: invoiceA4; min-height: 297mm; display: flex; justify-content: center; align-items: flex-start; padding-top: 10mm; }
+	.invoice-print-copy { break-after: page; page-break-after: always; break-inside: avoid; page-break-inside: avoid; }
+	.invoice-print-copy-last { break-after: auto; page-break-after: auto; }
+	.invoice-print-copy .invoice-receipt { width: 100%; box-shadow: none; }
+	body[data-invoice-paper='A4'] .invoice-print-copy .invoice-receipt { width: 76mm; }
+	.purchase-print-root, .purchase-print-root * { visibility: visible !important; }
+	.purchase-print-root { display: block !important; position: fixed; inset: 0; box-sizing: border-box; width: 100%; padding: 10mm; color: #000; background: #fff; font: 11px/1.4 Arial, sans-serif; }
+	.purchase-print-document { max-width: 190mm; margin: 0 auto; }
+	.purchase-print-document header { text-align: center; }
+	.purchase-print-document h1 { margin: 0; font-size: 20px; }
+	.purchase-print-document h2 { margin: 8px 0 4px; font-size: 13px; }
+	.purchase-print-document hr { border: 0; border-top: 1px dashed #333; margin: 8px 0; }
+	.purchase-print-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 18px; }
+	.purchase-print-meta > div, .purchase-print-totals > div, .purchase-print-payment { display: flex; justify-content: space-between; gap: 8px; }
+	.purchase-print-document table { width: 100%; border-collapse: collapse; }
+	.purchase-print-document th, .purchase-print-document td { padding: 5px; border-bottom: 1px solid #bbb; text-align: left; vertical-align: top; }
+	.purchase-print-document td:first-child { overflow-wrap: anywhere; }
+	.purchase-print-document td small { display: block; }
+	.purchase-print-total { border-top: 1px solid #111; margin-top: 4px; padding-top: 5px; font-size: 14px; }
+	.purchase-print-payment { padding: 3px 0; }
+}

@@ -5,9 +5,9 @@ import { seedDatabase } from './seed.js';
 
 runMigrations();
 seedDatabase();
-const port = Number(process.env.PORT || 5000);
+const PORT = Number(process.env.PORT || 5000);
 console.log('Sree Super Market POS Backend');
 console.log('Database: SQLite');
 console.log('Status: Connected');
-console.log(`Port: ${port}`);
-app.listen(port, () => console.log(`Sree Super Market API listening on http://localhost:${port}`));
+console.log(`Port: ${PORT}`);
+app.listen(PORT, () => console.log(`Sree Super Market API listening on http://localhost:${PORT}`));
