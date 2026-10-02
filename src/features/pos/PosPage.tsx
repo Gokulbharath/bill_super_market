@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useAuthStore } from '@/stores/authStore';
+import { useDataRefreshStore } from '@/stores/dataRefreshStore';
 import { productService, type BillRecord, type PosProduct } from '@/services/productService';
 import { adminService, type HeldBillRecord } from '@/services/adminService';
 import { InvoicePreviewDialog } from './InvoicePreviewDialog';
@@ -204,6 +205,7 @@ export function PosPage() {
 
   const finalize = async () => {
     setProcessing(true);
+    const refreshStore = useDataRefreshStore.getState();
     try {
       const completed = await productService.finalizeBill({
         items: cart.map((line) => ({ productId: line.id, quantity: line.quantity })),
@@ -224,6 +226,9 @@ export function PosPage() {
       setCustomerLookupOpen(true);
       setConfirmOpen(false);
       toast({ title: 'Bill completed', description: completed.bill_number });
+      // Trigger dashboard refresh
+      refreshStore.refreshDashboard();
+      refreshStore.refreshInventory();
     } catch (error) {
       toast({ title: error instanceof Error ? error.message : 'Unable to finalize bill.', variant: 'destructive' });
     } finally {

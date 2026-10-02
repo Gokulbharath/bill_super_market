@@ -1,5 +1,7 @@
 /* App-specific styles */
 
+.receipt-logo-container { text-align: center; margin-bottom: 4px; }
+.receipt-logo { max-width: 18mm; max-height: 12mm; object-fit: contain; margin: 0 auto; display: block; }
 .thermal-label { box-sizing: border-box; margin: 0 auto; padding: 14px 12px; border: 1px solid hsl(var(--border)); border-radius: 6px; background: #fff; color: #111; text-align: center; font-family: Georgia, 'Noto Sans Tamil', serif; }
 .thermal-store { margin: 0 0 10px; font-family: Arial, sans-serif; font-size: 11px; font-weight: 800; letter-spacing: .12em; }
 .thermal-product { margin: 0; font-size: 21px; font-weight: 700; line-height: 1.15; }

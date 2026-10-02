@@ -63,6 +63,9 @@ export function InvoiceReceipt({ invoice, copyType, copyLabel: copyLabelOverride
     <article className="invoice-receipt receipt">
       <p className="invoice-copy-label">{copyLabel}</p>
       <header className="invoice-header receipt-header">
+        <div className="receipt-logo-container">
+          <img src="/assets/logo.png" alt="Sree Super Market" className="receipt-logo" />
+        </div>
         <h1>{store.name}</h1>
         {store.addressLines.map((line) => <p key={line}>{line}</p>)}
         {store.phone && <p>Phone: {store.phone}</p>}

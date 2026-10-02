@@ -127,9 +127,31 @@ function query(filters: Record<string, string | undefined>) {
 
 const json = (method: string, payload: unknown): RequestInit => ({ method, body: JSON.stringify(payload) });
 
+export interface DashboardData {
+  summary: DashboardSummary;
+  recentBills: DashboardBill[];
+  yesterdaySales: number;
+  yesterdayBills: number;
+}
+
 export const adminService = {
   dashboardSummary: () => request<DashboardSummary>('/dashboard/summary'),
   dashboardRecentBills: () => request<DashboardBill[]>('/dashboard/recent-bills'),
+  dashboardFullData: async (): Promise<DashboardData> => {
+    const today = new Date().toISOString().slice(0, 10);
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    const [summary, recentBills, yesterdayData] = await Promise.all([
+      request<DashboardSummary>('/dashboard/summary'),
+      request<DashboardBill[]>('/dashboard/recent-bills'),
+      request<ReportSummary>(`/reports/summary?from=${yesterday}&to=${yesterday}`),
+    ]);
+    return {
+      summary,
+      recentBills,
+      yesterdaySales: yesterdayData.totalSales,
+      yesterdayBills: yesterdayData.totalBills,
+    };
+  },
   reportSummary: (filters: { from?: string; to?: string }) => request<ReportSummary>(`/reports/summary${query(filters)}`),
   salesReport: (filters: { from?: string; to?: string; search?: string; paymentMethod?: string }) => request<Array<Record<string, unknown>>>(`/reports/sales${query(filters)}`),
   productReport: (filters: { from?: string; to?: string; search?: string; categoryId?: string; brandId?: string }) => request<Array<Record<string, unknown>>>(`/reports/products${query(filters)}`),
