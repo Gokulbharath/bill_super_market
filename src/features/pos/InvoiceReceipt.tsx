@@ -41,14 +41,8 @@ export interface InvoiceReceiptData {
   items: InvoiceItem[];
   subtotal: number;
   discount: number;
-  taxableValue: number;
-  cgst: number;
-  sgst: number;
-  roundOff: number;
   grandTotal: number;
   paymentMethod: string;
-  cashReceived?: number;
-  changeAmount?: number;
   storeDetails: InvoiceStoreDetails;
 }
 
@@ -98,7 +92,6 @@ export function InvoiceReceipt({ invoice, copyType, copyLabel: copyLabelOverride
             <div className="invoice-item" key={item.id}>
               <div className="invoice-item-name">
                 {productNames.map((name, index) => <span key={`${item.id}-${index}`} lang={name === item.nameTamil ? 'ta' : 'en'} className={index === 0 ? 'font-bold' : undefined}>{name}</span>)}
-                {store.showGST && <small>GST {item.gstPercent}%</small>}
                 {store.showBarcode && item.barcode && <small>Barcode {item.barcode}</small>}
               </div>
               <span className="invoice-number">{item.quantity}</span>
@@ -113,22 +106,12 @@ export function InvoiceReceipt({ invoice, copyType, copyLabel: copyLabelOverride
       <section className="invoice-totals receipt-totals">
         <div><span>Subtotal</span><span>₹{amount(invoice.subtotal)}</span></div>
         <div><span>Discount</span><span>-₹{amount(invoice.discount)}</span></div>
-        <div><span>Taxable Value</span><span>₹{amount(invoice.taxableValue)}</span></div>
-        {store.showGST && <div><span>CGST</span><span>₹{amount(invoice.cgst)}</span></div>}
-        {store.showGST && <div><span>SGST</span><span>₹{amount(invoice.sgst)}</span></div>}
-        <div><span>Round Off</span><span>₹{amount(invoice.roundOff)}</span></div>
         <div className="invoice-grand-total"><strong>Grand Total</strong><strong>₹{amount(invoice.grandTotal)}</strong></div>
       </section>
 
       <div className="invoice-divider" />
       <section className="invoice-payment receipt-payment">
         <div><span>Paid - {invoice.paymentMethod}</span><span>₹{amount(invoice.grandTotal)}</span></div>
-        {invoice.paymentMethod === 'CASH' && invoice.cashReceived !== undefined && (
-          <>
-            <div><span>Cash Received</span><span>₹{amount(invoice.cashReceived)}</span></div>
-            <div><span>Change</span><span>₹{amount(invoice.changeAmount || 0)}</span></div>
-          </>
-        )}
       </section>
 
       <footer className="invoice-footer receipt-footer">

@@ -22,44 +22,12 @@ function calculate(items: Array<{ sellingPrice: number; quantity: number; gstPer
   const subtotal = money(items.reduce((sum, item) => sum + item.sellingPrice * item.quantity, 0));
   if (!Number.isFinite(discount) || discount < 0 || discount > subtotal) throw new Error('INVALID_DISCOUNT');
   const discountAmount = money(discount);
-  const taxableAmount = money(subtotal - discountAmount);
-  const taxMultiplier = subtotal > 0 ? taxableAmount / subtotal : 0;
-  let allocatedDiscount = 0;
-  const lineDiscounts: number[] = [];
-  const unroundedLineTaxes = items.map((item, index) => {
-    const lineTotal = item.sellingPrice * item.quantity;
-    const lineDiscount = index === items.length - 1
-      ? money(discountAmount - allocatedDiscount)
-      : subtotal > 0 ? money(discountAmount * lineTotal / subtotal) : 0;
-    allocatedDiscount = money(allocatedDiscount + lineDiscount);
-    lineDiscounts.push(lineDiscount);
-    return (lineTotal / (1 + item.gstPercent / 100)) * item.gstPercent / 100 * taxMultiplier;
-  });
-  const taxTotal = money(unroundedLineTaxes.reduce((sum, tax) => sum + tax, 0));
-  const lineTaxes = unroundedLineTaxes.map(money);
-  const taxDifference = money(taxTotal - money(lineTaxes.reduce((sum, tax) => sum + tax, 0)));
-  let lastTaxedLine = -1;
-  for (let lineIndex = items.length - 1; lineIndex >= 0; lineIndex -= 1) {
-    if (items[lineIndex].gstPercent > 0) {
-      lastTaxedLine = lineIndex;
-      break;
-    }
-  }
-  if (lastTaxedLine >= 0) lineTaxes[lastTaxedLine] = money(lineTaxes[lastTaxedLine] + taxDifference);
-  const cgst = money(taxTotal / 2);
-  const sgst = money(taxTotal - cgst);
-  const grandTotal = money(taxableAmount + taxTotal);
-  const roundOff = money(grandTotal - (taxableAmount + cgst + sgst));
+  const grandTotal = money(subtotal - discountAmount);
+
   return {
     subtotal,
     discount: discountAmount,
-    taxableAmount,
-    cgst,
-    sgst,
-    roundOff,
     grandTotal,
-    lineTaxes,
-    lineDiscounts,
   };
 }
 
@@ -72,7 +40,7 @@ export function searchProducts(term: string) {
   return db.prepare(`SELECT p.id, p.name_english AS nameEnglish, p.name_tamil AS nameTamil, p.sku, p.selling_price AS sellingPrice, p.mrp, p.gst_percent AS gstPercent, s.current_quantity AS currentStock, u.symbol AS unitSymbol, u.name AS unitName, pi.identifier_value AS identifierValue FROM products p LEFT JOIN inventory_stock s ON s.product_id = p.id LEFT JOIN units u ON u.id = p.unit_id LEFT JOIN product_identifiers pi ON pi.product_id = p.id AND pi.is_primary = 1 WHERE p.status = 'ACTIVE' AND (p.name_english LIKE ? OR p.name_tamil LIKE ? OR p.sku LIKE ? OR pi.identifier_value LIKE ? OR p.id IN (SELECT brand_id FROM brands WHERE name LIKE ?)) ORDER BY p.name_english LIMIT 30`).all(...Array(5).fill(`%${term}%`));
 }
 
-export function finalize(input: { items: BillItemInput[]; discount?: number; cashierId: string; cashierName?: string; counter?: string; cashReceived?: number; customerId?: number | null; customerName?: string; customerPhone?: string }) {
+export function finalize(input: { items: BillItemInput[]; discount?: number; cashierId: string; cashierName?: string; counter?: string; customerId?: number | null; customerName?: string; customerPhone?: string }) {
   if (!input.items.length) throw new Error('EMPTY_CART');
 
   const timestamp = now();
@@ -90,9 +58,6 @@ export function finalize(input: { items: BillItemInput[]; discount?: number; cas
     });
 
     const totals = calculate(resolved.map((item) => ({ ...item.product, quantity: item.quantity })), Number(input.discount || 0));
-    const cashReceived = money(input.cashReceived ?? totals.grandTotal);
-    if (!Number.isFinite(cashReceived) || cashReceived < totals.grandTotal) throw new Error('INSUFFICIENT_PAYMENT');
-    const changeAmount = money(cashReceived - totals.grandTotal);
     const billNumber = nextBillNumber();
     const customerNameSnapshot = customer?.name || input.customerName?.trim() || 'Walk-in Customer';
     const customerPhoneSnapshot = customer?.phone || input.customerPhone || '';
@@ -101,20 +66,17 @@ export function finalize(input: { items: BillItemInput[]; discount?: number; cas
 
     const bill = db.prepare(`
       INSERT INTO bills (
-        bill_number, cashier_id, bill_date, subtotal, discount, taxable_amount, cgst, sgst, grand_total,
+        bill_number, cashier_id, bill_date, subtotal, discount, grand_total,
         payment_method, status, customer_id, customer_name_snapshot, customer_phone_snapshot,
-        cashier_name_snapshot, counter_snapshot, cash_received, change_amount, round_off,
+        cashier_name_snapshot, counter_snapshot, paid_amount, balance,
         created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       billNumber,
       input.cashierId,
       timestamp.slice(0, 10),
       totals.subtotal,
       totals.discount,
-      totals.taxableAmount,
-      totals.cgst,
-      totals.sgst,
       totals.grandTotal,
       'CASH',
       'COMPLETED',
@@ -123,19 +85,17 @@ export function finalize(input: { items: BillItemInput[]; discount?: number; cas
       customerPhoneSnapshot,
       cashierNameSnapshot,
       counterSnapshot,
-      cashReceived,
-      changeAmount,
-      totals.roundOff,
+      totals.grandTotal,
+      0,
       timestamp,
       timestamp,
     );
 
     const billId = Number(bill.lastInsertRowid);
-    const insertItem = db.prepare('INSERT INTO bill_items (bill_id, product_id, product_name_snapshot, product_tamil_name_snapshot, barcode_snapshot, quantity, unit, selling_price, mrp, gst_percent, tax_amount, line_total, discount_amount, cost_price_snapshot, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+    const insertItem = db.prepare('INSERT INTO bill_items (bill_id, product_id, product_name_snapshot, product_tamil_name_snapshot, barcode_snapshot, quantity, unit, selling_price, mrp, gst_percent, line_total, discount_amount, cost_price_snapshot, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
 
     for (const [index, item] of resolved.entries()) {
       const lineTotal = item.product.sellingPrice * item.quantity;
-      const taxAmount = totals.lineTaxes[index] || 0;
       insertItem.run(
         billId,
         item.product.id,
@@ -147,9 +107,8 @@ export function finalize(input: { items: BillItemInput[]; discount?: number; cas
         item.product.sellingPrice,
         item.product.mrp,
         item.product.gstPercent,
-        taxAmount,
         lineTotal,
-        totals.lineDiscounts[index] || 0,
+        0,
         item.product.purchasePrice,
         timestamp,
       );

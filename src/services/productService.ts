@@ -199,7 +199,7 @@ export const productService = {
   createCustomer: (payload: { name: string; phone: string; status?: string }) => request<CustomerRecord>('/customers', { method: 'POST', body: JSON.stringify(payload) }),
   updateCustomer: (id: number, payload: { name?: string; phone?: string; status?: string }) => request<CustomerRecord>(`/customers/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
   customerBills: (id: number) => request<Array<Record<string, unknown>>>(`/customers/${id}/bills`),
-  finalizeBill: (payload: { items: Array<{ productId: number; quantity: number }>; discount: number; cashReceived?: number; cashierName?: string; counter?: string; customerId?: number | null; customerName?: string; customerPhone?: string }) => request<BillRecord>('/bills', { method: 'POST', body: JSON.stringify(payload) }),
+  finalizeBill: (payload: { items: Array<{ productId: number; quantity: number }>; discount: number; cashierName?: string; counter?: string; customerId?: number | null; customerName?: string; customerPhone?: string }) => request<BillRecord>('/bills', { method: 'POST', body: JSON.stringify(payload) }),
   bills: (search = '') => request<BillRecord[]>(`/bills${search ? `?search=${encodeURIComponent(search)}` : ''}`),
   bill: (id: number) => request<BillRecord>(`/bills/${id}`),
 };

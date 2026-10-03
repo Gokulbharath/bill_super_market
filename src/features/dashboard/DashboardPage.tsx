@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { TrendingUp, ShoppingCart, Package, AlertTriangle, ArrowUpRight, Receipt, RefreshCw } from 'lucide-react';
+import { TrendingUp, ShoppingCart, Package, AlertTriangle, ArrowUpRight, Receipt, RefreshCw, type LucideIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '@/components/common/PageHeader';
 import { StatCard } from '@/components/common/StatCard';
@@ -17,8 +17,8 @@ import { useDataRefreshStore } from '@/stores/dataRefreshStore';
 interface DashboardCard {
   title: string;
   value: string;
-  trend?: { value: string; positive?: boolean };
-  icon: React.ComponentType<{ className?: string }>;
+  trend?: { value: string; positive: boolean };
+  icon: LucideIcon;
   variant?: 'default' | 'warning';
   isLoading?: boolean;
 }

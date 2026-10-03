@@ -39,9 +39,7 @@ export function PosPage() {
   const [results, setResults] = useState<PosProduct[]>([]);
   const [cart, setCart] = useState<CartLine[]>([]);
   const [discount, setDiscount] = useState('0');
-  const [cashReceived, setCashReceived] = useState('0');
   const [counter, setCounter] = useState('Counter 01');
-  const [confirmOpen, setConfirmOpen] = useState(false);
   const [receipt, setReceipt] = useState<BillRecord | null>(null);
   const [processing, setProcessing] = useState(false);
   const [customer, setCustomer] = useState<CustomerSelection>({ id: null, name: 'Walk-in Customer', phone: '' });
@@ -103,24 +101,11 @@ export function PosPage() {
   const totals = useMemo(() => {
     const subtotal = money(cart.reduce((sum, line) => sum + line.sellingPrice * line.quantity, 0));
     const discountValue = money(Math.min(Math.max(Number(discount) || 0, 0), subtotal));
-    const taxable = money(subtotal - discountValue);
-    const taxMultiplier = subtotal > 0 ? taxable / subtotal : 0;
-    const tax = money(cart.reduce((sum, line) => {
-      const lineTotal = line.sellingPrice * line.quantity;
-      return sum + (lineTotal / (1 + line.gstPercent / 100)) * line.gstPercent / 100 * taxMultiplier;
-    }, 0));
-    const cgst = money(tax / 2);
-    const sgst = money(tax - cgst);
-    const grandTotal = money(taxable + tax);
-    const roundOff = money(grandTotal - taxable - cgst - sgst);
+    const grandTotal = money(subtotal - discountValue);
 
     return {
       subtotal,
       discount: discountValue,
-      taxable,
-      cgst,
-      sgst,
-      roundOff,
       grandTotal,
       itemCount: cart.reduce((sum, line) => sum + line.quantity, 0),
     };
@@ -210,7 +195,6 @@ export function PosPage() {
       const completed = await productService.finalizeBill({
         items: cart.map((line) => ({ productId: line.id, quantity: line.quantity })),
         discount: totals.discount,
-        cashReceived: Number(cashReceived),
         cashierName,
         counter,
         customerId: customer.id,
@@ -220,11 +204,9 @@ export function PosPage() {
       setReceipt(completed);
       setCart([]);
       setDiscount('0');
-      setCashReceived('0');
       setCustomer({ id: null, name: 'Walk-in Customer', phone: '' });
       setCustomerPhone('');
       setCustomerLookupOpen(true);
-      setConfirmOpen(false);
       toast({ title: 'Bill completed', description: completed.bill_number });
       // Trigger dashboard refresh
       refreshStore.refreshDashboard();
@@ -244,21 +226,15 @@ export function PosPage() {
         event.preventDefault();
         barcodeRef.current?.focus();
       }
-      if (event.key === 'F8' && cart.length) {
+      if (event.key === 'F8' && cart.length && !processing) {
         event.preventDefault();
-        setCashReceived(totals.grandTotal.toFixed(2));
-        setConfirmOpen(true);
+        void finalize();
       }
     };
 
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [cart.length, totals.grandTotal]);
-
-  const openConfirmation = () => {
-    setCashReceived(totals.grandTotal.toFixed(2));
-    setConfirmOpen(true);
-  };
+  }, [cart.length, processing]);
 
   const holdCurrentBill = async () => {
     if (!cart.length) return;
@@ -272,7 +248,6 @@ export function PosPage() {
       });
       setCart([]);
       setDiscount('0');
-      setCashReceived('0');
       setCustomer({ id: null, name: 'Walk-in Customer', phone: '' });
       setCustomerPhone('');
       setCustomerLookupOpen(true);
@@ -548,9 +523,6 @@ export function PosPage() {
               <Label htmlFor="billDiscount">Discount</Label>
               <Input id="billDiscount" className="w-28 text-right" type="number" min="0" step="0.01" value={discount} onChange={(event) => setDiscount(event.target.value)} />
             </div>
-            <div className="flex justify-between"><span>Taxable</span><span>₹{totals.taxable.toFixed(2)}</span></div>
-            <div className="flex justify-between"><span>CGST</span><span>₹{totals.cgst.toFixed(2)}</span></div>
-            <div className="flex justify-between"><span>SGST</span><span>₹{totals.sgst.toFixed(2)}</span></div>
             <div className="border-t pt-4 text-lg font-bold">
               <div className="flex justify-between"><span>Grand Total</span><span>₹{totals.grandTotal.toFixed(2)}</span></div>
             </div>
@@ -561,31 +533,10 @@ export function PosPage() {
               <Button variant="outline" onClick={() => setCart([])} disabled={!cart.length}>Clear Cart</Button>
               <Button variant="secondary" onClick={() => void holdCurrentBill()} disabled={!cart.length || processing}>Hold Bill</Button>
             </div>
-            <Button size="lg" onClick={openConfirmation} disabled={!cart.length || processing}>Finalize &amp; Print</Button>
+            <Button size="lg" onClick={() => void finalize()} disabled={!cart.length || processing}>{processing ? 'Processing...' : 'Finalize & Print'}</Button>
           </div>
         </aside>
       </div>
-
-      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Finalize Bill?</DialogTitle>
-            <DialogDescription>Items: {totals.itemCount} · Grand Total: ₹{totals.grandTotal.toFixed(2)} · Payment: CASH</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-2">
-            <Label htmlFor="cashReceived">Cash received</Label>
-            <Input id="cashReceived" type="number" min={totals.grandTotal} step="0.01" value={cashReceived} onChange={(event) => setCashReceived(event.target.value)} />
-            <div className="flex justify-between text-sm text-muted-foreground">
-              <span>Change</span>
-              <span>₹{Math.max(0, Number(cashReceived || 0) - totals.grandTotal).toFixed(2)}</span>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmOpen(false)}>Cancel</Button>
-            <Button onClick={() => void finalize()} disabled={processing || Number(cashReceived) < totals.grandTotal}>{processing ? 'Processing...' : 'Complete Payment / Print'}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <InvoicePreviewDialog open={Boolean(receipt)} onOpenChange={(open) => !open && setReceipt(null)} bill={receipt} completed autoPrint />
     </div>

@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { motion } from 'framer-motion';
-import { Eye, EyeOff, Lock, Mail, Barcode, Receipt, Printer, Shield } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail, ShieldCheck, ShoppingBasket, Tag, Shield } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { roleHomeRoutes } from '@/config/navigation';
 import { Button } from '@/components/ui/button';
@@ -44,11 +44,10 @@ export function LoginPage() {
 
   return (
     <div className="flex min-h-screen bg-background">
-      {/* Left Branding Section - Premium Supermarket Green */}
+      {/* Left Branding Section - Premium Departmental Store */}
       <div className="hidden md:flex md:w-1/2 flex-col items-center justify-center p-8 relative overflow-hidden bg-gradient-to-br from-emerald-600 via-emerald-700 to-emerald-800">
         {/* Decorative background elements */}
         <div className="absolute inset-0 opacity-30">
-          {/* Large circular gradients */}
           <div className="absolute top-10 right-20 w-96 h-96 bg-emerald-400 rounded-full blur-3xl opacity-20" />
           <div className="absolute bottom-20 left-10 w-80 h-80 bg-emerald-500 rounded-full blur-3xl opacity-20" />
         </div>
@@ -88,69 +87,71 @@ export function LoginPage() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.3 }}
-            className="text-center space-y-3 mb-10"
+            className="text-center space-y-4 mb-10"
           >
-            <h2 className="text-3xl font-bold text-white tracking-tight">SREE SUPER MARKET</h2>
-            <div className="space-y-1">
+            <h2 className="text-3xl font-bold text-white tracking-tight">Sree Super Market</h2>
+            <div className="space-y-2">
               <p className="text-emerald-50 text-xl font-semibold">Everything You Need. Every Day.</p>
               <p className="text-emerald-100 text-sm font-medium">Your neighbourhood departmental store</p>
             </div>
           </motion.div>
 
-          {/* Feature Indicators - Departmental Store Focus */}
+          {/* Retail/Store Concepts */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.5 }}
             className="flex items-center justify-center gap-8 mb-8"
           >
-            <div className="flex flex-col items-center gap-2">
-              <div className="w-14 h-14 rounded-full bg-white/15 flex items-center justify-center backdrop-blur-sm transition-all hover:bg-white/20">
-                <Shield className="w-6 h-6 text-white" />
+            <div className="flex flex-col items-center gap-3">
+              <div className="w-14 h-14 rounded-full bg-white/15 flex items-center justify-center backdrop-blur-sm">
+                <ShieldCheck className="w-6 h-6 text-white" />
               </div>
               <div className="text-center">
-                <p className="text-xs font-bold text-white">QUALITY</p>
-                <p className="text-xs text-emerald-100">Trusted Products</p>
+                <p className="text-xs font-bold text-emerald-50">QUALITY</p>
+                <p className="text-xs text-emerald-100 mt-0.5">Trusted Products</p>
               </div>
             </div>
-            <div className="flex flex-col items-center gap-2">
-              <div className="w-14 h-14 rounded-full bg-white/15 flex items-center justify-center backdrop-blur-sm transition-all hover:bg-white/20">
-                <Barcode className="w-6 h-6 text-white" />
+            <div className="flex flex-col items-center gap-3">
+              <div className="w-14 h-14 rounded-full bg-white/15 flex items-center justify-center backdrop-blur-sm">
+                <ShoppingBasket className="w-6 h-6 text-white" />
               </div>
               <div className="text-center">
-                <p className="text-xs font-bold text-white">VARIETY</p>
-                <p className="text-xs text-emerald-100">Everyday Essentials</p>
+                <p className="text-xs font-bold text-emerald-50">VARIETY</p>
+                <p className="text-xs text-emerald-100 mt-0.5">Everyday Essentials</p>
               </div>
             </div>
-            <div className="flex flex-col items-center gap-2">
-              <div className="w-14 h-14 rounded-full bg-white/15 flex items-center justify-center backdrop-blur-sm transition-all hover:bg-white/20">
-                <Receipt className="w-6 h-6 text-white" />
+            <div className="flex flex-col items-center gap-3">
+              <div className="w-14 h-14 rounded-full bg-white/15 flex items-center justify-center backdrop-blur-sm">
+                <Tag className="w-6 h-6 text-white" />
               </div>
               <div className="text-center">
-                <p className="text-xs font-bold text-white">VALUE</p>
-                <p className="text-xs text-emerald-100">Great Value</p>
+                <p className="text-xs font-bold text-emerald-50">VALUE</p>
+                <p className="text-xs text-emerald-100 mt-0.5">Great Value</p>
               </div>
             </div>
           </motion.div>
 
           {/* Store Categories */}
-          <motion.p
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.6 }}
-            className="text-center text-xs text-emerald-100 mb-8 px-4 leading-relaxed"
+            className="text-center mb-8"
           >
-            Groceries • Household • Personal Care<br />
-            Beverages • Daily Essentials
-          </motion.p>
+            <p className="text-xs text-emerald-100 font-medium leading-relaxed">
+              Groceries • Household • Personal Care<br />Beverages • Daily Essentials
+            </p>
+          </motion.div>
 
-          {/* Stylish Store Promise */}
+          {/* Premium Store Quote */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.7 }}
             className="text-center"
           >
+            <p className="text-2xl font-bold text-emerald-100 italic tracking-wide">Your Store.<br />Your Everyday Essentials.</p>
           </motion.div>
         </div>
       </div>

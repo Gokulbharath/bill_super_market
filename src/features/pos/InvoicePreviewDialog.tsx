@@ -45,14 +45,8 @@ function createInvoiceData(bill: BillRecord, settings: StoreSettings, qrCodeData
     })),
     subtotal: Number(bill.subtotal || 0),
     discount: Number(bill.discount || 0),
-    taxableValue: Number(bill.taxable_amount || 0),
-    cgst: Number(bill.cgst || 0),
-    sgst: Number(bill.sgst || 0),
-    roundOff: Number(bill.round_off || 0),
     grandTotal,
     paymentMethod: bill.payment_method || 'CASH',
-    cashReceived: bill.cash_received === undefined ? grandTotal : Number(bill.cash_received),
-    changeAmount: Number(bill.change_amount || 0),
     storeDetails: {
       name: settings.name,
       addressLines: [
@@ -177,7 +171,6 @@ export function InvoicePreviewDialog({
               {invoice ? <div className="grid grid-cols-2 gap-3 border-y py-3 text-sm"><span className="text-muted-foreground">Payment</span><strong>{invoice.paymentMethod}</strong><span className="text-muted-foreground">Customer</span><strong>{invoice.customer}</strong></div> : <p className="py-4 text-sm text-muted-foreground">{settingsError || 'Loading store settings...'}</p>}
               <DialogFooter className="flex-col sm:flex-row">
                 <Button variant="outline" onClick={() => setViewOpen(true)} disabled={!invoice}>View Invoice</Button>
-                <Button onClick={() => printInvoice(paperSize)} disabled={!invoice}><Printer className="mr-2 h-4 w-4" /> Print {copies} Copies</Button>
                 <Button variant="ghost" onClick={() => onOpenChange(false)}>Close</Button>
               </DialogFooter>
             </>
